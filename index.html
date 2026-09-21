@@ -1,0 +1,1218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Krupali Tejani — Data visualization</title>
+<meta name="description" content="Krupali Tejani. Data, pipelines, and making sense of what's in them.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;600&family=Fraunces:opsz,wght,SOFT,WONK@9..144,400..700,0..100,0..1&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#F2F4FB;
+    --panel:#FFFFFF;
+    --wash:#E8ECF7;
+    --ink:#101828;
+    --muted:#59647C;
+    --rule:#D7DEEE;
+    --shadow:16,24,40;
+
+    --c-waste:#12873D;
+    --c-hr:#5B4BE0;
+    --c-pizza:#D44128;
+    --c-bikes:#0E77D9;
+    --c-insp:#9F6B07;
+    --c-covid:#0B8379;
+    --c-sales:#DB2777;
+
+    --measure:60ch;
+    --gutter:clamp(1.25rem,5vw,4rem);
+
+    --t-xs:.8125rem;
+    --t-s:.9375rem;
+    --t-m:1.0625rem;
+    --t-l:clamp(1.2rem,2.5vw,1.4rem);
+    --t-2xl:clamp(1.7rem,4vw,2.3rem);
+    --t-3xl:clamp(2.3rem,7.6vw,4.5rem);
+  }
+
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%;scroll-behavior:smooth}
+  body{
+    margin:0;background:var(--bg);color:var(--ink);
+    font-family:"IBM Plex Sans",system-ui,sans-serif;
+    font-size:var(--t-m);line-height:1.6;overflow-x:hidden;
+  }
+  body.locked{overflow:hidden}
+
+  /* ============ BACKGROUND: drifting colour fields + symbol weave ============ */
+  .bg{position:fixed;inset:0;z-index:-3;pointer-events:none;overflow:hidden}
+  .blob{position:absolute;border-radius:50%;filter:blur(90px);will-change:transform}
+  .b1{width:62vw;height:52vw;left:-14vw;top:-18vw;background:rgba(91,75,224,.30)}
+  .b2{width:54vw;height:48vw;right:-12vw;top:-10vw;background:rgba(14,119,217,.27)}
+  .b3{width:58vw;height:50vw;right:-16vw;top:42vh;background:rgba(11,131,121,.22)}
+  .b4{width:50vw;height:46vw;left:-14vw;top:56vh;background:rgba(219,39,119,.19)}
+  .b5{width:46vw;height:40vw;left:34vw;top:88vh;background:rgba(159,107,7,.17)}
+  @media(prefers-reduced-motion:no-preference){
+    .b1{animation:drift1 34s ease-in-out infinite alternate}
+    .b2{animation:drift2 41s ease-in-out infinite alternate}
+    .b3{animation:drift3 47s ease-in-out infinite alternate}
+    .b4{animation:drift2 38s ease-in-out infinite alternate-reverse}
+    .b5{animation:drift1 52s ease-in-out infinite alternate-reverse}
+    @keyframes drift1{to{transform:translate3d(9vw,5vh,0) scale(1.14)}}
+    @keyframes drift2{to{transform:translate3d(-8vw,7vh,0) scale(1.1)}}
+    @keyframes drift3{to{transform:translate3d(-6vw,-8vh,0) scale(1.18)}}
+  }
+  /* tiled chart symbols, woven into the background */
+  .weave{position:fixed;inset:0;z-index:-2;pointer-events:none;opacity:.5;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='150' height='150' viewBox='0 0 150 150'%3E%3Cg fill='none' stroke='%23101828' stroke-opacity='0.13' stroke-width='1.4' stroke-linecap='round'%3E%3Cpath d='M12 34h6M22 26h6M32 30h6M42 18h6'/%3E%3Cpath d='M96 22a9 9 0 1 1-9 9'/%3E%3Cpath d='M112 74c6-1 9-11 15-11s9 8 15 6'/%3E%3Cpath d='M20 96v10M28 90v16M36 99v7M44 86v20'/%3E%3Cpath d='M74 128h8M86 122h8M98 131h8'/%3E%3C/g%3E%3Cg fill='%23101828' fill-opacity='0.11'%3E%3Ccircle cx='72' cy='58' r='2'/%3E%3Ccircle cx='82' cy='50' r='2'/%3E%3Ccircle cx='62' cy='66' r='2'/%3E%3Ccircle cx='128' cy='36' r='2'/%3E%3Ccircle cx='136' cy='46' r='2'/%3E%3Ccircle cx='52' cy='122' r='2'/%3E%3Ccircle cx='118' cy='108' r='2'/%3E%3Ccircle cx='128' cy='116' r='2'/%3E%3C/g%3E%3C/svg%3E");
+    background-size:150px 150px;
+    mask-image:radial-gradient(1500px 1000px at 50% 26%, #000 0%, rgba(0,0,0,.35) 52%, transparent 78%);
+    -webkit-mask-image:radial-gradient(1500px 1000px at 50% 26%, #000 0%, rgba(0,0,0,.35) 52%, transparent 78%);
+  }
+  .grain{position:fixed;inset:0;z-index:-1;pointer-events:none;opacity:.04;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)'/%3E%3C/svg%3E")}
+
+  h1,h2,h3{font-family:"Fraunces",Georgia,serif;
+    font-variation-settings:"SOFT" 26,"WONK" 1;
+    font-weight:600;line-height:1.05;margin:0;letter-spacing:-.02em;text-wrap:balance}
+  p{margin:0 0 1rem}
+  a{color:inherit}
+  a:focus-visible,button:focus-visible,[role=button]:focus-visible{
+    outline:2.5px solid var(--c-bikes);outline-offset:3px;border-radius:4px}
+  img{display:block;max-width:100%}
+  button{font:inherit;color:inherit}
+  code{font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace;font-size:.92em}
+  svg.ico{width:1.05em;height:1.05em;flex:none;vertical-align:-.15em}
+  .note{font-family:"Caveat",cursive;font-size:1.22rem;line-height:1.3;color:var(--muted)}
+  .wrap{max-width:78rem;margin:0 auto;padding:0 var(--gutter)}
+
+  /* ---- die-cut sticker: hard outline, offset shadow, sits crooked ---- */
+  .sticker{
+    display:inline-flex;align-items:center;gap:.45rem;
+    font-family:"IBM Plex Sans",sans-serif;font-weight:600;font-size:var(--t-s);
+    padding:.45rem 1rem;border-radius:999px;border:2px solid var(--ink);
+    background:var(--sk,#fff);color:var(--ink);text-decoration:none;cursor:pointer;
+    box-shadow:3px 3px 0 var(--ink);transform:rotate(var(--rot,-2deg));
+    transition:transform .18s cubic-bezier(.2,1.5,.4,1),box-shadow .18s ease,
+               background .18s ease,color .18s ease;
+  }
+  .sticker:hover{transform:rotate(0deg) translate(-1px,-1px);box-shadow:5px 5px 0 var(--ink)}
+  .sticker:active{transform:rotate(0deg) translate(2px,2px);box-shadow:1px 1px 0 var(--ink)}
+  .sticker[aria-pressed="true"]{background:var(--ink);color:#fff;
+    box-shadow:3px 3px 0 var(--sk,#B9C2D8);transform:rotate(0deg)}
+  .sticker.sm{font-size:.74rem;padding:.32rem .78rem;border-width:1.8px;box-shadow:2.5px 2.5px 0 var(--ink)}
+  .sticker.sm:hover{box-shadow:4px 4px 0 var(--ink)}
+  @media(prefers-reduced-motion:reduce){.sticker{transform:none;transition:none}}
+
+  /* ---- the line that finishes itself ---- */
+  .cycler{font-family:"Fraunces",serif;font-variation-settings:"SOFT" 30,"WONK" 1;
+          font-size:clamp(1.25rem,3.1vw,1.85rem);line-height:1.32;margin:1.15rem 0 0;
+          max-width:34ch;min-height:2.64em}
+  .cycler .fixed{color:var(--muted)}
+  .cycler .swap{color:var(--ink);font-weight:600}
+  .cycler .caret{display:inline-block;width:.07em;height:1em;vertical-align:-.13em;
+                 background:var(--c-pizza);margin-left:.06em}
+  @media(prefers-reduced-motion:no-preference){
+    .cycler .caret{animation:blink 1.05s steps(1) infinite}
+    @keyframes blink{50%{opacity:0}}
+  }
+  .narrow{max-width:74rem;margin-left:auto;margin-right:auto}
+
+  /* ============ ribbon ============ */
+  .bar{position:sticky;top:0;z-index:30;background:rgba(242,244,251,.72);
+       backdrop-filter:blur(18px);border-bottom:1px solid var(--rule)}
+  .bar-in{max-width:78rem;margin:0 auto;padding:.7rem var(--gutter);display:flex;align-items:center;gap:1rem}
+  .mark-link{display:flex;align-items:center;gap:.6rem;text-decoration:none;min-width:0}
+  .mark-link .dots{display:flex;gap:2.5px;flex:none}
+  .mark-link .dots i{width:5px;height:5px;border-radius:50%}
+  .mark-link .wm{display:flex;flex-direction:column;line-height:1.12;min-width:0}
+  .mark-link .wm b{font-family:"Fraunces",serif;font-weight:600;font-size:var(--t-m);white-space:nowrap}
+  .mark-link .wm i{font-style:normal;font-family:"IBM Plex Mono",monospace;font-size:.62rem;
+                   letter-spacing:.13em;color:var(--muted);white-space:nowrap}
+  .bar nav{margin-left:auto;display:flex;gap:1.3rem}
+  .bar nav a{font-size:var(--t-xs);color:var(--muted);text-decoration:none;white-space:nowrap}
+  .bar nav a:hover{color:var(--ink)}
+
+  /* ============ 1 · intro ============ */
+  .intro{padding:clamp(3rem,9vw,6rem) 0 clamp(2rem,5vw,3rem);text-align:center}
+  .intro h1{font-size:var(--t-3xl);max-width:14ch;margin:0 auto}
+  .intro .lede{font-size:var(--t-l);line-height:1.55;margin:1.6rem auto 0;
+               max-width:var(--measure);text-wrap:pretty}
+  .intro .lede strong{font-weight:600}
+  .intro .cycler{margin-left:auto;margin-right:auto}
+  .intro .contact{justify-content:center}
+
+  /* ============ 2 · contact ============ */
+  .contact{display:flex;gap:.7rem;flex-wrap:wrap;margin-top:2.1rem}
+
+  /* ============ 3 · the morph ============ */
+  .sec{padding:clamp(2.5rem,7vw,4.5rem) 0;border-top:1px solid var(--rule)}
+  .ch{display:flex;align-items:baseline;justify-content:center;gap:.85rem;margin-bottom:.55rem}
+  .ch .num{font-family:"IBM Plex Mono",monospace;font-size:.74rem;letter-spacing:.12em;
+           color:var(--muted);padding-top:.3rem}
+  .ch h2{font-size:var(--t-2xl);max-width:28ch}
+  .ch-sub{color:var(--muted);max-width:64ch;margin:0 auto 1.9rem;text-align:center;
+          text-wrap:pretty}
+
+  .stage{display:flex;flex-direction:column;
+         background:rgba(255,255,255,.62);border:1px solid var(--rule);border-radius:18px;
+         padding:clamp(.85rem,2.5vw,1.5rem);backdrop-filter:blur(8px);
+         box-shadow:0 18px 60px -34px rgba(var(--shadow),.4)}
+  .stage svg{display:block;width:100%;height:auto}
+  /* chart and the list of what is in it, side by side */
+  .tk-split{display:grid;gap:1.25rem;align-items:stretch}
+  @media(min-width:64rem){.tk-split{grid-template-columns:minmax(0,1.62fr) minmax(0,1fr)}}
+  .tk-split>*{min-width:0}
+
+  .tk-list{display:flex;flex-direction:column;
+           background:rgba(255,255,255,.62);border:1px solid var(--rule);border-radius:18px;
+           padding:1.1rem 1.15rem 1.25rem;backdrop-filter:blur(8px);text-align:left;
+           box-shadow:0 18px 60px -36px rgba(var(--shadow),.36)}
+  .tk-list .grp{padding:.65rem 0}
+  .tk-list .grp + .grp{border-top:1px solid var(--rule)}
+  .tk-list .ghd{display:flex;align-items:center;gap:.45rem;margin-bottom:.5rem}
+  .tk-list .ghd i{width:.66rem;height:.66rem;border-radius:50%;flex:none}
+  .tk-list .ghd h3{font-family:"IBM Plex Sans",sans-serif;font-size:var(--t-s);
+                   font-weight:600;letter-spacing:0;color:var(--gc)}
+  .tk-list .ghd b{margin-left:auto;font-family:"IBM Plex Mono",monospace;
+                  font-size:.7rem;font-weight:500;color:var(--muted)}
+  .tk-list ul{margin:0;padding:0;list-style:none;display:flex;flex-wrap:wrap;gap:.3rem}
+  .tk-list li{font-size:var(--t-xs);color:var(--muted);background:var(--wash);
+              border:1px solid transparent;border-radius:999px;padding:.22rem .6rem;
+              cursor:default;transition:background .15s ease,color .15s ease,border-color .15s ease}
+  .tk-list li:hover{color:var(--ink);background:#fff;border-color:var(--gc)}
+  .tk-list li em{font-style:normal;font-family:"IBM Plex Mono",monospace;
+                 font-size:.86em;opacity:.65;margin-left:.3rem}
+  .tk-note{font-size:var(--t-xs);color:var(--muted);margin:auto 0 0;padding-top:.9rem}
+
+  /* hovering a tool in the list isolates its dot in the chart */
+  .dot-c,.dot-g{transition:opacity .16s ease}
+  .dot-c.dim,.dot-g.dim{opacity:.12}
+  .dot-c.hot{stroke:var(--ink);stroke-width:2.5}
+  @media(prefers-reduced-motion:reduce){.dot-c,.dot-g{transition:none}}
+  .forms{display:flex;gap:.6rem;flex-wrap:wrap;margin:1.15rem 0 0}
+  .readout{display:grid;grid-template-columns:auto minmax(0,1fr);gap:.15rem .8rem;
+           align-items:baseline;margin:1.05rem 0 0;min-height:5rem;align-content:start}
+  .readout .rn{font-family:"Fraunces",serif;font-size:1.28rem;font-weight:600;white-space:nowrap}
+  .readout .rd{color:var(--muted);font-size:var(--t-s)}
+  @media(max-width:40rem){
+    .readout{grid-template-columns:minmax(0,1fr);min-height:6.4rem}
+  }
+  .dot-c{cursor:crosshair}
+
+  /* ============ 4 · dashboards ============ */
+  .filters{display:flex;flex-direction:column;align-items:center;gap:.85rem;margin-bottom:1.9rem}
+  .frow{display:flex;align-items:center;justify-content:center;gap:.6rem;flex-wrap:wrap}
+  .frow>.fl{font-family:"IBM Plex Mono",monospace;font-size:.66rem;letter-spacing:.1em;
+            color:var(--muted);min-width:3.8rem}
+  .fbtn .n{opacity:.55;margin-left:.3rem;font-weight:400}
+  .fcount{font-size:var(--t-xs);color:var(--muted);margin:0;text-align:center}
+
+  .grid{display:grid;grid-template-columns:minmax(0,1fr);gap:1.1rem}
+  .grid>*{min-width:0}
+  @media(min-width:34rem){.grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+  @media(min-width:64rem){.grid{grid-template-columns:repeat(6,minmax(0,1fr));gap:1.2rem}}
+  .tile-wrap{perspective:900px}
+  @media(min-width:64rem){
+    .tile-wrap{grid-column:span 2}
+    .tile-wrap.big{grid-column:span 3}
+  }
+  .tile-wrap[hidden]{display:none}
+  .tile{width:100%;position:relative;display:flex;flex-direction:column;border-radius:14px;
+        background:var(--panel);border:1px solid var(--rule);overflow:hidden;padding:0;
+        cursor:pointer;text-align:left;transform-style:preserve-3d;
+        box-shadow:0 4px 14px -9px rgba(var(--shadow),.2);
+        transition:transform .3s cubic-bezier(.2,.8,.2,1),border-color .2s ease,box-shadow .3s ease}
+  .tile:hover{border-color:var(--tc);
+              box-shadow:0 22px 48px -24px var(--tc),0 5px 16px -8px rgba(var(--shadow),.18)}
+  .tile-viz{position:relative;display:block;aspect-ratio:16/10;background:var(--tint);overflow:hidden}
+  .tile-viz svg.art{position:absolute;inset:0;width:100%;height:100%;
+                    transition:transform .35s cubic-bezier(.2,.8,.2,1)}
+  .tile:hover .tile-viz svg.art{transform:scale(1.07) translateZ(30px)}
+  .tile-viz img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+  .tile-badge{position:absolute;top:.6rem;right:.6rem;display:flex;gap:.3rem}
+  .tile-badge span{display:inline-flex;align-items:center;gap:.22rem;font-size:.7rem;
+                   background:rgba(255,255,255,.92);border:1px solid var(--rule);
+                   border-radius:999px;padding:.16rem .45rem;color:var(--tc);font-weight:500}
+  .tile-badge svg.ico{width:.85em;height:.85em}
+  .tile-meta{padding:1rem 1.15rem 1.2rem;display:flex;flex-direction:column;gap:.3rem;flex:1;
+             text-align:left}
+  .tile-head{display:flex;align-items:baseline;gap:.5rem;margin-bottom:.15rem;
+             font-family:"IBM Plex Mono",monospace;font-size:.68rem;letter-spacing:.08em}
+  .tile-head .no{font-weight:500;color:var(--tc)}
+  .tile-head .when{color:var(--muted)}
+  .tile-meta h3{font-size:var(--t-l);font-weight:600}
+  .fave{position:absolute;top:.6rem;left:.6rem;font-family:"IBM Plex Sans",sans-serif;
+        font-weight:600;font-size:.68rem;padding:.2rem .6rem;border-radius:999px;
+        background:#FFD84D;color:var(--ink);border:1.8px solid var(--ink);
+        box-shadow:2px 2px 0 var(--ink);transform:rotate(-7deg)}
+  .tile-meta .sub{font-size:var(--t-s);color:var(--muted);line-height:1.45}
+  /* the client line now closes the card, where the defect line used to be */
+  .tile-foot{margin-top:auto;padding-top:.9rem;display:flex;align-items:center;gap:.5rem;
+             font-family:"IBM Plex Mono",monospace;font-size:.66rem;letter-spacing:.09em;
+             color:var(--tc);font-weight:500}
+  .tile-foot .arrow{transition:transform .22s ease;margin-left:auto}
+  .tile-foot .arrow svg.ico{width:1.15em;height:1.15em}
+  .tile:hover .tile-foot .arrow{transform:translateX(5px)}
+
+  /* ============ 5 · toolkit ============ */
+  .skill-grid{display:grid;gap:1.1rem}
+  @media(min-width:36rem){.skill-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+  @media(min-width:68rem){.skill-grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
+  .skill-card{position:relative;background:var(--panel);border:1px solid var(--rule);
+              border-radius:12px;padding:1.2rem 1.2rem 1.35rem;overflow:hidden;
+              box-shadow:0 4px 14px -10px rgba(var(--shadow),.2);
+              transition:transform .2s ease,border-color .2s ease}
+  .skill-card:hover{transform:translateY(-4px);border-color:var(--sc)}
+  .skill-card::before{content:"";position:absolute;inset:0 0 auto;height:3px;background:var(--sg)}
+  .skill-card .cap{display:flex;align-items:center;gap:.55rem;margin-bottom:.85rem;color:var(--sc)}
+  .skill-card .cap h3{font-size:var(--t-s);font-family:"IBM Plex Sans",sans-serif;
+                      font-weight:600;letter-spacing:0}
+  .skill-card ul{margin:0;padding:0;list-style:none;display:flex;flex-wrap:wrap;gap:.35rem}
+  .skill-card li{font-size:var(--t-xs);color:var(--muted);background:var(--wash);
+                 border-radius:999px;padding:.25rem .65rem;transition:color .15s ease}
+  .skill-card:hover li{color:var(--ink)}
+
+  /* ============ detail sheet ============ */
+  .sheet{position:fixed;inset:0;z-index:50;display:none;background:rgba(16,24,40,.45);
+         backdrop-filter:blur(5px);overflow-y:auto;overscroll-behavior:contain}
+  .sheet.open{display:block}
+  .sheet-inner{max-width:62rem;margin:0 auto;background:var(--bg);min-height:100vh}
+  @media(min-width:52rem){
+    .sheet-inner{margin:3rem auto;min-height:0;border:1px solid var(--rule);border-radius:18px;
+                 overflow:hidden;box-shadow:0 44px 96px -30px rgba(var(--shadow),.45)}
+  }
+  .sheet-bar{position:sticky;top:0;z-index:3;display:flex;align-items:center;gap:.75rem;
+             padding:.85rem clamp(1.25rem,4vw,2.5rem);background:rgba(242,244,251,.93);
+             backdrop-filter:blur(14px);border-bottom:1px solid var(--rule)}
+  .sheet-bar .swatch{width:.72rem;height:.72rem;border-radius:3px;background:var(--dc);flex:none}
+  .sheet-bar .label{font-size:var(--t-xs);color:var(--muted)}
+  .sheet-bar button{margin-left:auto;background:none;border:1px solid var(--rule);border-radius:999px;
+                    padding:.38rem .9rem;font-size:var(--t-xs);cursor:pointer;flex:none;
+                    display:inline-flex;align-items:center;gap:.4rem}
+  .sheet-bar button:hover{border-color:var(--dc);color:var(--dc)}
+  .sh-head{position:relative;overflow:hidden;background:var(--dcg);
+           border-bottom:1px solid var(--rule);
+           padding:clamp(1.8rem,5vw,2.8rem) clamp(1.25rem,4vw,2.5rem)}
+  .sh-head .mark{position:absolute;right:-2%;top:50%;transform:translateY(-50%);
+                 width:min(40%,280px);opacity:.15;pointer-events:none}
+  .sh-head .kicker{position:relative;font-family:"IBM Plex Mono",monospace;font-size:.7rem;
+                   letter-spacing:.11em;color:var(--dc);margin-bottom:.7rem}
+  .sh-head h2{position:relative;font-size:clamp(1.85rem,5vw,2.6rem);max-width:22ch}
+  .sh-head .q{position:relative;font-size:var(--t-l);line-height:1.45;margin:1.05rem 0 0;
+              max-width:var(--measure);padding-left:1rem;border-left:4px solid var(--dc)}
+  .pipe{display:flex;gap:.45rem;overflow-x:auto;scrollbar-width:thin;
+        padding:1.05rem clamp(1.25rem,4vw,2.5rem);border-bottom:1px solid var(--rule)}
+  .pipe .stg,.pipe .sep{flex:none}
+  .pipe .stg{display:flex;flex-direction:column;gap:.15rem;background:var(--panel);
+             border:1px solid var(--rule);border-radius:9px;padding:.55rem .8rem}
+  .pipe .stg b{font-size:var(--t-xs);font-weight:600}
+  .pipe .stg i{font-style:normal;font-family:"IBM Plex Mono",monospace;font-size:.66rem;
+               letter-spacing:.05em;color:var(--dc)}
+  .pipe .sep{display:flex;align-items:center;color:var(--dc);opacity:.6}
+  .sheet-body{padding:clamp(1.6rem,4vw,2.4rem) clamp(1.25rem,4vw,2.5rem) 4rem}
+  .act{display:grid;gap:.15rem .95rem;grid-template-columns:auto minmax(0,1fr);
+       padding:1.15rem 0;border-bottom:1px solid var(--rule)}
+  .act:first-child{border-top:1px solid var(--rule)}
+  .act .an{font-family:"IBM Plex Mono",monospace;font-size:.72rem;letter-spacing:.1em;
+           color:var(--dc);padding-top:.35rem}
+  .act h3{font-size:var(--t-s);font-family:"IBM Plex Sans",sans-serif;font-weight:600;letter-spacing:0}
+  .act p{grid-column:2;margin:.35rem 0 0;color:var(--muted);max-width:none;text-wrap:pretty}
+  .act p strong{color:var(--ink);font-weight:600}
+  .facts{margin:1.75rem 0 0;font-size:var(--t-s);border-top:1px solid var(--rule)}
+  .facts div{display:flex;gap:1rem;padding:.62rem 0;border-bottom:1px solid var(--rule)}
+  .facts dt{flex:0 0 clamp(4.75rem,22vw,6rem);color:var(--muted)}
+  .facts dd{margin:0;flex:1}
+  .dlinks{display:flex;gap:.6rem;flex-wrap:wrap;margin-top:1.6rem}
+  .dlinks a{display:inline-flex;align-items:center;gap:.5rem;font-size:var(--t-s);
+            text-decoration:none;padding:.5rem .95rem;border-radius:999px;
+            background:var(--panel);border:1px solid var(--dc);transition:transform .16s ease}
+  .dlinks a:hover{transform:translateY(-2px)}
+  .shots{margin-top:clamp(1.75rem,4vw,2.5rem);display:grid;
+         grid-template-columns:minmax(0,1fr);gap:1.6rem}
+  figure{margin:0}
+  figure img{width:100%;border:1px solid var(--rule);background:#fff;border-radius:10px}
+  figure img.gone{display:none}
+  .slot{aspect-ratio:16/10;border:1.5px dashed var(--dc);background:var(--wash);border-radius:10px;
+        display:flex;align-items:flex-end;padding:1.15rem;font-size:var(--t-xs);
+        line-height:1.5;color:var(--muted)}
+  .slot code{color:var(--dc)}
+  .video{margin-top:1.25rem}
+  .video .frame{position:relative;aspect-ratio:16/9;background:var(--wash);
+                border:1px solid var(--rule);border-radius:10px;overflow:hidden}
+  .video .frame iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+  .video .frame video{position:absolute;inset:0;width:100%;height:100%;
+                      object-fit:contain;background:#0d1117;display:block}
+  .video .frame .slot{aspect-ratio:auto;height:100%;border:0;flex-direction:column;
+                      justify-content:flex-end;align-items:flex-start;gap:.3rem}
+  .video .frame .slot b{font-family:"Fraunces",serif;font-size:var(--t-m);color:var(--dc)}
+
+  footer{border-top:1px solid var(--rule);padding:2.5rem 0 4rem;font-size:var(--t-s);
+          color:var(--muted);text-align:center}
+  footer .fnote{margin:.6rem 0 0}
+
+  @media(prefers-reduced-motion:no-preference){
+    .rise{opacity:0;animation:rise .95s cubic-bezier(.2,.8,.2,1) both}
+    @keyframes rise{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:none}}
+    .reveal{opacity:0;animation:up .75s cubic-bezier(.2,.7,.2,1) both}
+    @keyframes up{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+  }
+  @media(prefers-reduced-motion:reduce){
+    .tile,.tile:hover,.tile-viz svg.art,.skill-card,.contact a{transition:none;transform:none}
+  }
+</style>
+</head>
+<body>
+
+<div class="bg" aria-hidden="true">
+  <span class="blob b1"></span><span class="blob b2"></span><span class="blob b3"></span>
+  <span class="blob b4"></span><span class="blob b5"></span>
+</div>
+<div class="weave" aria-hidden="true"></div>
+<div class="grain" aria-hidden="true"></div>
+
+<div class="bar">
+  <div class="bar-in">
+    <a class="mark-link" href="#top">
+      <span class="dots" id="wm-dots" aria-hidden="true"></span>
+      <span class="wm"><b>DATA &amp; VISUALIZATION</b><i>Portfolio</i></span>
+    </a>
+    <nav>
+      <a href="#toolkit">Toolkit</a>
+      <a href="#work">Dashboards</a>
+    </nav>
+  </div>
+</div>
+
+<main id="top">
+
+  <!-- ============ 1 · WHO I AM ============ -->
+  <section class="intro wrap">
+    <div class="narrow rise">
+      <h1>Krupali Tejani</h1>
+      <p class="cycler" id="cycler"></p>
+      <!-- EDIT: your paragraph. Keep it about you, not about projects. -->
+      <p class="lede">I’m passionate about data and the moment when a pile of numbers starts to make sense. I’ve been working with data and visualization since undergrad, and I’ve always enjoyed figuring out what the data is really saying.</p>
+      <p class="lede">Most of my work happens before the chart: building pipelines, cleaning and connecting data, and making sure the numbers actually mean what we think they mean. I enjoy that part just as much as the final visualization, because a chart is only as good as the data behind it. I like turning messy data into something clear, useful, and easy for others to understand.</p>
+
+      <!-- ============ 2 · CONTACT ============ -->
+      <div class="contact" id="contact"></div>
+    </div>
+  </section>
+
+  <!-- ============ 2 · TOOLKIT, CHARTED ============ -->
+  <section class="sec wrap" id="toolkit">
+    <div class="narrow">
+      <div class="ch"><span class="num">01</span><h2>My toolkit, seven ways</h2></div>
+      <p class="ch-sub">Each dot represents a tool I’ve worked with. The bigger the dot, the more I’ve used it. The same 26 tools appear across every view, just arranged differently to highlight different perspectives. Hover over or click on a tool to see the dot it represents.</p>
+      <div class="tk-split">
+        <div class="stage rise" style="animation-delay:.12s">
+          <div id="stage"></div>
+          <div class="forms" id="forms"></div>
+          <div class="readout" id="readout"></div>
+        </div>
+        <aside class="tk-list rise" style="animation-delay:.2s" id="tool-list"></aside>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 3 · DASHBOARDS ============ -->
+  <section class="sec wrap" id="work">
+    <div class="narrow">
+      <div class="ch"><span class="num">02</span><h2>Dashboards</h2></div>
+      <p class="ch-sub">Seven of them. Filter by tool or chart family, then open any one for the full story.</p>
+      <div class="filters" id="filters"></div>
+      <div class="grid" id="grid"></div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="wrap">
+  <div class="narrow">
+    <p>Krupali Tejani &nbsp;·&nbsp; Boston, MA</p>
+  </div>
+</footer>
+
+<div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title">
+  <div class="sheet-inner">
+    <div class="sheet-bar">
+      <span class="swatch"></span>
+      <span class="label" id="sheet-label"></span>
+      <button type="button" id="sheet-close">Close</button>
+    </div>
+    <div id="sheet-head"></div>
+    <div id="sheet-pipe"></div>
+    <div class="sheet-body" id="sheet-body"></div>
+  </div>
+</div>
+
+<script>
+/* ==================================================================
+   EDIT HERE ONLY.
+
+   FORMS    - the seven chart shapes the dots morph between, and the
+              opinion shown under each. Reorder freely; the cycle
+              follows this array.
+   PROJECTS - one per dashboard. weight also drives the morph shapes.
+       client   : shown at the foot of the tile (was the defect line)
+       defect   : still used as the label in the detail sheet header
+       acts     : three-act body of the detail view (exactly three)
+       tool / chart : the two filter facets
+       glyph    : donut | bars | curve | scatter | area | spokes | stack
+       big      : true = wider tile on desktop
+       when     : date shown beside the issue number
+       shots    : image paths only. One = full width, two or more = side by side.
+       video    : path to a local file, e.g. 'videos/name.mp4'
+       poster    : still frame shown before play (optional)
+       youtube  : video ID, used only when `video` is not set.
+                  Omit both keys entirely for no video at all.
+       dashboard / repo : URLs. '' hides that link.
+
+   IMAGES - make an "images" folder next to this file. Any missing file
+            shows a placeholder naming the filename it wants.
+   ================================================================== */
+
+var FORMS = [
+  { id:'phases',   name:'By phase',    blurb:'Where each tool sits in the work — ingest, reconcile, interrogate, visualize. Four clusters, and the reconcile pile is the biggest for a reason.' },
+  { id:'bars',     name:'Ranked',      blurb:'Every tool ranked by how many projects I have actually used it on. A few workhorses, then a long tail of things I reach for occasionally.' },
+  { id:'beeswarm', name:'Spread',      blurb:'The same counts as a distribution. Most of a toolkit goes unused most of the time, and a CV implying otherwise is how you get caught out.' },
+  { id:'donut',    name:'Share',       blurb:'What fraction of the toolkit belongs to each phase. Worth noticing how little of it is the charting layer.' },
+  { id:'scatter',  name:'Phase × use', blurb:'Phase along the bottom, projects used on up the side. Top-left is where my heaviest, earliest-in-the-pipeline work sits.' },
+  { id:'spiral',   name:'In order',    blurb:'The toolkit wound into the order a project touches it, first ingest to final chart. Pretty, and almost never the clearest way to show this.' },
+  { id:'grid',     name:'All of it',   blurb:'All 26, one row per phase, nothing aggregated away. The honest version, and where I would start before deciding anything.' }
+];
+
+/* ---- the real data behind the chart ----
+   One dot per tool. p = phase, matching the four groups in the list.
+   n = how many projects or roles I have used it on, 1-7. EDIT THESE. */
+var TOOLS = [
+  { t:'Airflow',              p:0, n:3 }, { t:'Azure Data Factory',   p:0, n:2 },
+  { t:'Databricks',           p:0, n:2 }, { t:'AWS',                  p:0, n:3 },
+  { t:'Azure',                p:0, n:2 }, { t:'ETL / ELT',            p:0, n:6 },
+  { t:'Alteryx',              p:0, n:1 },
+  { t:'Python',               p:1, n:7 }, { t:'SQL',                  p:1, n:7 },
+  { t:'PySpark',              p:1, n:2 }, { t:'dbt',                  p:1, n:2 },
+  { t:'Snowflake',            p:1, n:2 }, { t:'PostgreSQL',           p:1, n:3 },
+  { t:'MySQL',                p:1, n:2 }, { t:'Dimensional modeling', p:1, n:4 },
+  { t:'Exploratory analysis', p:2, n:7 }, { t:'Hypothesis testing',   p:2, n:2 },
+  { t:'Data quality checks',  p:2, n:6 }, { t:'Claude API',           p:2, n:1 },
+  { t:'OpenAI',               p:2, n:1 },
+  { t:'Power BI',             p:3, n:3 }, { t:'Tableau',              p:3, n:5 },
+  { t:'Plotly',               p:3, n:2 }, { t:'Streamlit',            p:3, n:1 },
+  { t:'Excel',                p:3, n:4 }, { t:'Data storytelling',    p:3, n:6 }
+];
+
+var PHASES = [
+  { name:'Ingest & orchestrate', hex:'#0E77D9', icon:'cloud' },
+  { name:'Reconcile & model',    hex:'#5B4BE0', icon:'code' },
+  { name:'Interrogate',          hex:'#12873D', icon:'analysis' },
+  { name:'Visualize & tell',     hex:'#9F6B07', icon:'chart' }
+];
+
+var PROJECTS = [
+  {
+    id:'waste', title:'Waste diversion',
+    sub:'Tonnage and diversion across California haulers',
+    client:'DYRT LABS · CALIFORNIA', fave:true,
+    color:'#12873D', glyph:'stack', weight:108, big:true,
+    tool:'Plotly', chart:'Flow', defect:'Units disagree',
+    kicker:'CALIFORNIA · 2025',
+    question:'Which haulers are actually diverting waste from landfill, and which just collect more of it?',
+    pipeline:[
+      { stage:'SOURCE',   label:'Municipal tonnage reports' },
+      { stage:'STANDARD', label:'Pandas + NumPy' },
+      { stage:'MODEL',    label:'Indexed SQL' },
+      { stage:'VISUAL',   label:'Plotly Sankey' }
+    ],
+    acts:[
+      { head:'What arrived', body:'California municipalities reported tonnage in different formats, units, dates, and city names. The raw data was <strong>not directly comparable</strong>.' },
+      { head:'What I did', body:'Used Pandas and NumPy to standardize categories, units, and city names, <strong>cutting data prep from six hours to twenty minutes</strong>.' },
+      { head:'What it showed', body:'A Plotly Sankey mapped waste from haulers to recycling and landfill endpoints. Separating diversion rate from volume made <strong>facility-level gaps easier to spot</strong>.' }
+    ],
+    facts:{},
+    thumb:'images/waste-thumb.png',
+    shots:[
+      {src:'media/waste2.png'},
+      {src:'media/waste1.png'},
+      {src:'media/waste.png'},
+      {src:'media/waste3.png'}
+    ],
+    /* local file, relative to this page. poster is the still shown before play. */
+    video:'media/WasteManagement Dashboard demo.mov',
+    poster:'media/waste2.png',
+    dashboard:'', repo:''
+  },
+  {
+    id:'bluebikes', title:'Bluebikes ridership',
+    sub:'Station-level supply and demand, Boston metro',
+    client:'PERSONAL · BOSTON OPEN DATA', fave:true,
+    color:'#0E77D9', glyph:'spokes', weight:62, big:true,
+    tool:'Tableau', chart:'Map', defect:'State must be derived',
+    kicker:'BOSTON · OPEN DATA',
+    question:'Where does the system run dry, and at what hour?',
+    pipeline:[
+      { stage:'SOURCE',    label:'Open trip history' },
+      { stage:'AGGREGATE', label:'Station × hour net flow' },
+      { stage:'MODEL',     label:'SQL' },
+      { stage:'VISUAL',    label:'Tableau' }
+    ],
+    acts:[
+      { head:'What arrived', body:'Trip data with start stations, end stations, and timestamps, but <strong>no station-level bike availability</strong>.' },
+      { head:'What I did', body:'Reconstructed station availability from arrivals and departures, then flagged stations that <strong>filled or emptied too quickly</strong>.' },
+      { head:'What it showed', body:'A <strong>commute-driven imbalance</strong>: residential stations empty in the morning while downtown fills, then the pattern reverses.' }
+    ],
+    facts:{},
+    thumb:'images/bluebikes-thumb.png',
+    shots:[
+      {src:'media/Blue1.png'},
+      {src:'media/blue2.png'}
+    ],
+    video:'media/Bluebike demo.mov',
+    poster:'media/Blue1.png',
+    dashboard:'', repo:''
+  },
+  {
+    id:'pizza', title:'Pizza chain sales',
+    sub:'Order-level sales analysis for a multi-location chain',
+    client:'PROJECT · MULTI-LOCATION CHAIN',
+    color:'#D44128', glyph:'bars', weight:92, big:true,
+    tool:'Tableau', chart:'Bar', defect:'Grain double-counts',
+    kicker:'MULTI-LOCATION CHAIN',
+    question:'What actually drives a good night, the menu or the hour or the location?',
+    pipeline:[
+      { stage:'SOURCE',  label:'POS line items' },
+      { stage:'ROLL-UP', label:'Line → order → day-part' },
+      { stage:'MODEL',   label:'SQL' },
+      { stage:'VISUAL',  label:'Tableau' }
+    ],
+    acts:[
+      { head:'What arrived', body:'Orders at line-item level, so <strong>naive aggregation double-counted revenue</strong>.' },
+      { head:'What I did', body:'Rolled line items up to orders, then analyzed revenue by <strong>time, location, category, and size</strong>.' },
+      { head:'What it showed', body:'<strong>Best-selling and most profitable items differ</strong>, while peak hours vary by location.' }
+    ],
+    facts:{},
+    thumb:'images/pizza-thumb.png',
+    shots:[
+      {src:'media/Pizza 1.png'},
+      {src:'media/Pizza 2.png'}
+    ],
+    dashboard:'', repo:''
+  },
+  {
+    id:'inspections', title:'Food inspections',
+    sub:'Restaurant inspection outcomes, Chicago and Dallas',
+    client:'PROJECT · CHICAGO & DALLAS',
+    color:'#9F6B07', glyph:'scatter', weight:84, big:true,
+    tool:'Tableau', chart:'Scatter', defect:'No shared taxonomy',
+    kicker:'TWO-CITY COMPARISON',
+    question:'Do two cities inspecting the same kinds of restaurants agree on what counts as a failure?',
+    pipeline:[
+      { stage:'SOURCE', label:'Two city portals' },
+      { stage:'MAP',    label:'Shared violation taxonomy' },
+      { stage:'MODEL',  label:'SQL' },
+      { stage:'VISUAL', label:'Tableau' }
+    ],
+    acts:[
+      { head:'What arrived', body:'Chicago used pass/fail while Dallas used scores. <strong>The definitions did not match</strong>.' },
+      { head:'What I did', body:'Mapped both cities to a <strong>shared outcome and violation taxonomy</strong>.' },
+      { head:'What it showed', body:'<strong>Failures clustered by establishment</strong>, with re-inspection timing varying between cities.' }
+    ],
+    facts:{},
+    thumb:'images/inspections-thumb.png',
+    shots:[
+      {src:'media/Food lens.png'},
+      {src:'media/Food lens 2.png'}
+    ],
+    dashboard:'', repo:''
+  },
+  {
+    id:'hr', title:'HR analytics',
+    sub:'Headcount, attrition and pay',
+    client:'PROJECT · PEOPLE DATA',
+    color:'#5B4BE0', glyph:'donut', weight:74,
+    tool:'Tableau', chart:'Radial', defect:'Point-in-time missing',
+    kicker:'PEOPLE DATA',
+    question:'Which teams are losing people faster than they can hire, and is pay the reason?',
+    pipeline:[
+      { stage:'SOURCE', label:'HRIS export' },
+      { stage:'DERIVE', label:'Monthly snapshot' },
+      { stage:'MODEL',  label:'SQL' },
+      { stage:'VISUAL', label:'Tableau' }
+    ],
+    acts:[
+      { head:'What arrived', body:'One row per person with hire and termination dates. <strong>Monthly headcount had to be derived</strong> before attrition could be measured.' },
+      { head:'What I did', body:'Built monthly snapshots to compare <strong>attrition, tenure, and hiring</strong> across departments, with pay bands joined separately.' },
+      { head:'What it showed', body:'Put <strong>attrition and compensation together</strong> to help distinguish pay gaps from other retention patterns.' }
+    ],
+    facts:{},
+    thumb:'images/hr-thumb.png',
+    shots:[
+      {src:'media/Hr.png'}
+    ],
+    dashboard:'', repo:''
+  },
+  {
+    id:'covid', title:'COVID-19 analysis',
+    sub:'Case, death and vaccination trends over time',
+    client:'PROJECT · PUBLIC HEALTH',
+    color:'#0B8379', glyph:'curve', weight:48,
+    tool:'Tableau', chart:'Time series', defect:'Retroactive revisions',
+    kicker:'PUBLIC HEALTH',
+    question:'How do you fairly compare outbreaks between places of wildly different size?',
+    pipeline:[
+      { stage:'SOURCE',    label:'Public case & vaccination data' },
+      { stage:'SMOOTH',    label:'Difference + rolling average' },
+      { stage:'NORMALIZE', label:'Per 100k population' },
+      { stage:'VISUAL',    label:'Tableau' }
+    ],
+    acts:[
+      { head:'What arrived', body:'Cumulative case counts with changing reporting patterns. <strong>Daily jumps often reflected reporting, not new cases</strong>.' },
+      { head:'What I did', body:'Converted cumulative counts to daily numbers, smoothed reporting gaps, and <strong>normalized by population</strong> for fair comparison.' },
+      { head:'What it showed', body:'<strong>Wave patterns across places</strong>, with case fatality shown against cases using the appropriate time lag.' }
+    ],
+    facts:{},
+    thumb:'images/covid-thumb.png',
+    shots:[
+      {src:'media/Covid.png'}
+    ],
+    dashboard:'', repo:''
+  },
+  {
+    id:'sales', title:'Retail store sales',
+    sub:'Store performance report with targets and margin',
+    client:'PROJECT · RETAIL',
+    color:'#DB2777', glyph:'area', weight:68,
+    tool:'Power BI', chart:'Area', defect:'Silent netting',
+    kicker:'RETAIL · POWER BI',
+    question:'Is this store growing, or just discounting more?',
+    pipeline:[
+      { stage:'SOURCE', label:'Transactions, products, targets' },
+      { stage:'HANDLE', label:'Returns & discounts explicit' },
+      { stage:'MODEL',  label:'DAX measures' },
+      { stage:'VISUAL', label:'Power BI' }
+    ],
+    acts:[
+      { head:'What arrived', body:'Transactions with returns and discounts <strong>hidden inside net revenue</strong>, making store performance misleading.' },
+      { head:'What I did', body:'Separated returns and discounts into explicit measures and built <strong>reusable DAX for actuals vs. plan</strong>.' },
+      { head:'What it showed', body:'Revenue and margin side by side. <strong>Higher revenue does not always mean higher profit</strong>.' }
+    ],
+    facts:{},
+    thumb:'images/sales-thumb.png',
+    shots:[
+      {src:'media/Store sales.png'}
+    ],
+    dashboard:'', repo:''
+  }
+];
+
+/* the line that finishes itself */
+var CYCLE_PREFIX = 'I\u2019m the data person who\u00a0';
+var CYCLE = [
+  'finds the story in the mess.',
+  'questions the number before visualizing it.',
+  'turns messy data into something useful.',
+  'makes complicated things easier to see.',
+  'gets a little too curious about the data.',
+  'makes the numbers make sense.',
+  'doesn’t trust a clean chart without clean data.'
+];
+
+var CONTACT = [
+  { label:'krupalitejani1@gmail.com', url:'mailto:krupalitejani1@gmail.com', icon:'mail', sk:'#FFD84D' },
+  { label:'LinkedIn', url:'http://www.linkedin.com/in/krupalitejani', icon:'linkedin', sk:'#8FD3FF' },
+  { label:'GitHub',   url:'https://github.com/Krupali04', icon:'github',   sk:'#FFB3A0' }
+];
+
+/* ============ nothing below here needs editing ============ */
+
+var P = 'stroke="currentColor" fill="none" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"';
+var ICONS = {
+  mail:'<rect x="2.5" y="4.5" width="19" height="15" rx="2.5" '+P+'/><path d="M3.5 6.5 12 13l8.5-6.5" '+P+'/>',
+  linkedin:'<rect x="3" y="3" width="18" height="18" rx="3" '+P+'/><path d="M7.5 10.5v6M7.5 7.6v.1M12 16.5v-6M16.5 16.5v-3.2a2.3 2.3 0 0 0-4.5-.7" '+P+'/>',
+  github:'<path d="M9.2 20.5v-2.6c-2.8.5-3.5-1.3-3.5-1.3-.4-1-1-1.3-1-1.3-.9-.6 0-.6 0-.6 1 .1 1.5 1 1.5 1 .9 1.5 2.3 1.1 2.9.8.1-.7.4-1.1.7-1.4-2.3-.3-4.1-1.2-4.1-4.6 0-1 .3-1.8.9-2.4-.1-.3-.4-1.3.1-2.6 0 0 .9-.3 2.9 1a6.8 6.8 0 0 1 4 0c2-1.3 2.9-1 2.9-1 .5 1.3.2 2.3.1 2.6.6.6.9 1.4.9 2.4 0 3.4-1.8 4.3-4.1 4.6.5.4.8 1.1.8 2.2v2.7" '+P+'/>',
+  analysis:'<circle cx="12" cy="12" r="8.5" '+P+'/><path d="M12 3.5v8.5l6 3.6" '+P+'/>',
+  code:'<path d="M9 7.5 4.5 12 9 16.5M15 7.5 19.5 12 15 16.5M13.4 5l-2.8 14" '+P+'/>',
+  chart:'<path d="M4 19.5h16M7 19.5v-7M11.7 19.5V7M16.4 19.5v-4.5" '+P+'/>',
+  cloud:'<path d="M7.5 18.5h9.2a3.8 3.8 0 0 0 .5-7.6 5.4 5.4 0 0 0-10.4-1A3.9 3.9 0 0 0 7.5 18.5Z" '+P+'/>',
+  arrow:'<path d="M5 12h13M13 6.5 18.5 12 13 17.5" '+P+'/>',
+  chev:'<path d="M9.5 6.5 15 12l-5.5 5.5" '+P+'/>',
+  x:'<path d="M6.5 6.5l11 11M17.5 6.5l-11 11" '+P+'/>',
+  image:'<rect x="3" y="4.5" width="18" height="15" rx="2.5" '+P+'/><circle cx="8.7" cy="10" r="1.6" '+P+'/><path d="M3.6 17.4 9 12.6l4 3.4 3.2-2.6 4.2 3.6" '+P+'/>',
+  play:'<circle cx="12" cy="12" r="9" '+P+'/><path d="M10 8.4 16 12l-6 3.6V8.4Z" '+P+'/>'
+};
+function ico(k){ return '<svg class="ico" viewBox="0 0 24 24" aria-hidden="true">'+(ICONS[k]||'')+'</svg>'; }
+function findProject(id){ var f=null; PROJECTS.forEach(function(p){ if(p.id===id){f=p;} }); return f; }
+
+/* ---- header + contact ---- */
+document.getElementById('wm-dots').innerHTML = PROJECTS.slice(0,4).map(function(p){
+  return '<i style="background:'+p.color+'"></i>';
+}).join('');
+var ROT = ['-2.4deg','1.8deg','-1.4deg','2.6deg','-2deg','1.2deg','-2.8deg','2deg'];
+document.getElementById('contact').innerHTML = CONTACT.map(function(c,i){
+  return '<a class="sticker" href="'+c.url+'"'+
+    (c.url.charAt(0)==='#'?'':' target="_blank" rel="noopener"')+
+    ' style="--sk:'+c.sk+';--rot:'+ROT[i % ROT.length]+'">'+ico(c.icon)+
+    '<span>'+c.label+'</span></a>';
+}).join('');
+
+/* cycler */
+(function cycler(){
+  var el = document.getElementById('cycler');
+  if(!el) return;
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function paint(txt, caret){
+    el.innerHTML = '<span class="fixed">'+CYCLE_PREFIX+'</span><span class="swap">'+txt+'</span>' +
+                   (caret ? '<span class="caret"></span>' : '');
+  }
+  if(reduce){ paint(CYCLE[0], false); return; }
+  var i = 0, ch = 0, del = false;
+  function step(){
+    var full = CYCLE[i];
+    ch += del ? -1 : 1;
+    paint(full.slice(0, ch), true);
+    var wait = del ? 26 : 52;
+    if(!del && ch === full.length){ del = true; wait = 2100; }
+    else if(del && ch === 0){ del = false; i = (i+1) % CYCLE.length; wait = 380; }
+    setTimeout(step, wait);
+  }
+  paint('', true);
+  setTimeout(step, 700);
+})();
+
+/* ================= THE MORPH =================
+   One dot per tool in TOOLS. Seven real views of the same 26 records.
+============================================== */
+(function morph(){
+  var N = TOOLS.length;
+  var VW = 900, VH = 430;
+  var X0 = 62, X1 = 838, Y0 = 54, Y1 = 372;
+  var PW = X1 - X0, PH = Y1 - Y0;
+  var CX = (X0 + X1) / 2, CY = (Y0 + Y1) / 2;
+  var NMAX = Math.max.apply(null, TOOLS.map(function(d){ return d.n; }));
+  var NMIN = Math.min.apply(null, TOOLS.map(function(d){ return d.n; }));
+  var NP = PHASES.length;
+
+  var inPhase = PHASES.map(function(_, j){
+    return TOOLS.filter(function(d){ return d.p === j; }).length;
+  });
+  var idxInPhase = [], seen = [];
+  PHASES.forEach(function(){ seen.push(0); });
+  TOOLS.forEach(function(d){ idxInPhase.push(seen[d.p]++); });
+
+  var rank = [];
+  TOOLS.map(function(d, i){ return { i:i, n:d.n, p:d.p }; })
+    .sort(function(a, b){ return (b.n - a.n) || (a.p - b.p) || (a.i - b.i); })
+    .forEach(function(o, r){ rank[o.i] = r; });
+
+  var byN = {}, slotInN = [];
+  TOOLS.forEach(function(d, i){
+    if(!byN[d.n]){ byN[d.n] = []; }
+    slotInN[i] = byN[d.n].length;
+    byN[d.n].push(i);
+  });
+
+  var cellSlot = [], cellSize = [], cells = {};
+  TOOLS.forEach(function(d, i){
+    var key = d.p + ':' + d.n;
+    if(!cells[key]){ cells[key] = []; }
+    cellSlot[i] = cells[key].length;
+    cells[key].push(i);
+  });
+  TOOLS.forEach(function(d, i){ cellSize[i] = cells[d.p + ':' + d.n].length; });
+
+  var maxPhase = Math.max.apply(null, inPhase);
+  function radius(d){ return 6.2 + (d.n / NMAX) * 7.2; }
+
+  var LAYOUT = {
+    grid: function(d, i){
+      var cnt = inPhase[d.p], k = idxInPhase[i];
+      var pitch = PW / (maxPhase - 1);
+      var startX = X0 + Math.round((maxPhase - cnt) / 2) * pitch;
+      return { x: startX + k * pitch, y: Y0 + d.p * (PH / (NP - 1)), r: radius(d) * 0.8 };
+    },
+    phases: function(d, i){
+      var cx = X0 + (d.p + 0.5) * (PW / NP);
+      var k = idxInPhase[i], cnt = inPhase[d.p];
+      var ring = k === 0 ? 0 : (k <= 6 ? 1 : 2);
+      var pos  = k === 0 ? 0 : (k <= 6 ? k - 1 : k - 7);
+      var per  = ring === 0 ? 1 : (ring === 1 ? Math.min(6, cnt - 1) : Math.max(cnt - 7, 1));
+      var a = (pos / per) * Math.PI * 2 - Math.PI / 2;
+      var rad = ring * 36;
+      return { x: cx + Math.cos(a) * rad, y: CY + Math.sin(a) * rad, r: radius(d) };
+    },
+    bars: function(d, i){
+      return { x: X0 + rank[i] * (PW / (N - 1)),
+               y: Y1 - (d.n / NMAX) * PH * 0.92, r: radius(d) * 0.88 };
+    },
+    beeswarm: function(d, i){
+      var t = (d.n - NMIN) / (NMAX - NMIN || 1);
+      var slot = slotInN[i], size = byN[d.n].length;
+      return { x: X0 + (0.06 + 0.88 * t) * PW,
+               y: CY + (slot - (size - 1) / 2) * 31, r: radius(d) };
+    },
+    donut: function(d, i){
+      var start = 0, q;
+      for(q = 0; q < d.p; q++){ start += inPhase[q] / N; }
+      var span = inPhase[d.p] / N;
+      var a = (start + (idxInPhase[i] + 0.5) / inPhase[d.p] * span) * Math.PI * 2 - Math.PI / 2;
+      return { x: CX + Math.cos(a) * 128, y: CY + Math.sin(a) * 128 * 0.78, r: radius(d) * 0.86 };
+    },
+    scatter: function(d, i){
+      var t = (d.n - NMIN) / (NMAX - NMIN || 1);
+      var cell = cellSlot[i], size = cellSize[i];
+      return { x: X0 + (d.p + 0.5) * (PW / NP) + (cell - (size - 1) / 2) * 31,
+               y: Y1 - (0.06 + 0.88 * t) * PH, r: radius(d) };
+    },
+    spiral: function(d, i){
+      var t = i / (N - 1);
+      var a = t * Math.PI * 2 * 2.6, rad = 28 + t * 132;
+      return { x: CX + Math.cos(a) * rad, y: CY + Math.sin(a) * rad * 0.72, r: radius(d) * 0.8 };
+    }
+  };
+  function positions(id){ return TOOLS.map(LAYOUT[id]); }
+
+  var glow = '', core = '';
+  TOOLS.forEach(function(d, i){
+    var col = PHASES[d.p].hex;
+    glow += '<circle class="dot-g" r="10" fill="' + col + '" fill-opacity=".15"/>';
+    core += '<circle class="dot-c" data-i="' + i + '" r="8" fill="' + col +
+            '" fill-opacity=".92"><title>' + d.t + ' — ' + d.n +
+            (d.n === 1 ? ' project' : ' projects') + '</title></circle>';
+  });
+  document.getElementById('stage').innerHTML =
+    '<svg viewBox="0 0 ' + VW + ' ' + VH + '" xmlns="http://www.w3.org/2000/svg" role="img" ' +
+    'aria-label="The 26 tools in my toolkit, rearranged seven ways">' +
+    '<g>' + glow + '</g><g>' + core + '</g></svg>';
+
+  document.getElementById('tool-list').innerHTML = PHASES.map(function(ph, j){
+    var items = '';
+    TOOLS.forEach(function(d, i){
+      if(d.p !== j) return;
+      items += '<li data-i="' + i + '">' + d.t + '<em>' + d.n + '</em></li>';
+    });
+    return '<div class="grp" style="--gc:' + ph.hex + '">' +
+      '<div class="ghd"><i style="background:' + ph.hex + '"></i>' +
+        '<h3>' + ph.name + '</h3><b>' + inPhase[j] + '</b></div>' +
+      '<ul>' + items + '</ul></div>';
+  }).join('') +
+  '<p class="tk-note">The number is how many projects I have used it on. ' +
+  'Hover one to find it in the chart.</p>';
+
+  var gN = document.querySelectorAll('.dot-g');
+  var cN = document.querySelectorAll('.dot-c');
+  var cur = positions(FORMS[0].id);
+  var from = cur.slice(), to = cur.slice();
+  var t0 = 0, DUR = 1100, STAG = 380, running = false, idx = 0, timer = null, picked = false;
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  function paint(pos){
+    for(var i = 0; i < N; i++){
+      var q = pos[i];
+      gN[i].setAttribute('cx', q.x.toFixed(1)); gN[i].setAttribute('cy', q.y.toFixed(1));
+      gN[i].setAttribute('r', (q.r * 2.2).toFixed(1));
+      cN[i].setAttribute('cx', q.x.toFixed(1)); cN[i].setAttribute('cy', q.y.toFixed(1));
+      cN[i].setAttribute('r', q.r.toFixed(1));
+    }
+  }
+  function ease(x){ return 1 - Math.pow(1 - x, 3); }
+  function frame(now){
+    var done = true;
+    for(var i = 0; i < N; i++){
+      var dly = (TOOLS[i].p / NP) * STAG + (idxInPhase[i] / 8) * (STAG * 0.5);
+      var u = (now - t0 - dly) / DUR;
+      if(u < 0){ u = 0; done = false; } else if(u < 1){ done = false; } else { u = 1; }
+      var e = ease(u), f = from[i], g = to[i];
+      cur[i] = { x:f.x + (g.x - f.x) * e, y:f.y + (g.y - f.y) * e, r:f.r + (g.r - f.r) * e };
+    }
+    paint(cur);
+    if(done){ running = false; } else { requestAnimationFrame(frame); }
+  }
+  function setForm(n, byUser){
+    idx = (n + FORMS.length) % FORMS.length;
+    var f = FORMS[idx];
+    from = cur.map(function(q){ return { x:q.x, y:q.y, r:q.r }; });
+    to = positions(f.id);
+    Array.prototype.forEach.call(document.querySelectorAll('.form-btn'), function(b){
+      b.setAttribute('aria-pressed', b.getAttribute('data-form') === f.id ? 'true' : 'false');
+    });
+    document.getElementById('readout').innerHTML =
+      '<span class="rn">' + f.name + '</span><span class="rd">' + f.blurb + '</span>';
+    if(reduce){ cur = to.slice(); paint(cur); return; }
+    t0 = performance.now();
+    if(!running){ running = true; requestAnimationFrame(frame); }
+    if(byUser){ picked = true; if(timer){ clearInterval(timer); timer = null; } }
+  }
+
+  var FROT = ['-2.5deg','1.9deg','-1.5deg','2.4deg','-2.1deg','1.4deg','-2.7deg'];
+  document.getElementById('forms').innerHTML = FORMS.map(function(f, i){
+    return '<button class="sticker sm form-btn" data-form="' + f.id + '" aria-pressed="false" ' +
+      'style="--sk:' + PHASES[i % NP].hex + '22;--rot:' + FROT[i % FROT.length] + '">' +
+      f.name + '</button>';
+  }).join('');
+  document.getElementById('forms').addEventListener('click', function(e){
+    var b = e.target.closest('.form-btn'); if(!b) return;
+    var want = b.getAttribute('data-form'), n = 0;
+    FORMS.forEach(function(f, i){ if(f.id === want){ n = i; } });
+    setForm(n, true);
+  });
+
+  /* hover a tool in the list, find it in the chart */
+  var list = document.getElementById('tool-list');
+  function isolate(pick){
+    for(var i = 0; i < N; i++){
+      var on = (pick === -1 || pick === i);
+      cN[i].setAttribute('class', 'dot-c' + (on ? (pick === i ? ' hot' : '') : ' dim'));
+      gN[i].setAttribute('class', 'dot-g' + (on ? '' : ' dim'));
+    }
+  }
+  list.addEventListener('mouseover', function(e){
+    var li = e.target.closest('li[data-i]');
+    if(li){ isolate(+li.getAttribute('data-i')); }
+  });
+  list.addEventListener('mouseleave', function(){ isolate(-1); });
+
+  paint(cur);
+  setForm(0, false);
+  if(!reduce){
+    timer = setInterval(function(){ if(!picked){ setForm(idx + 1, false); } }, 4400);
+  }
+})();
+
+/* ================= tile glyphs ================= */
+function glyph(kind, c){
+  var stroke = 'stroke="'+c+'" fill="none" stroke-width="2.5" stroke-linecap="round"';
+  var g = {};
+  g.donut =
+    '<circle cx="160" cy="100" r="48" stroke="'+c+'" stroke-opacity=".2" fill="none" stroke-width="18"/>' +
+    '<circle cx="160" cy="100" r="48" stroke="'+c+'" fill="none" stroke-width="18" stroke-linecap="round" ' +
+    'stroke-dasharray="205 302" transform="rotate(-90 160 100)"/>';
+  g.bars = [22,54,38,78,60,96,72].map(function(h,i){
+    return '<rect x="'+(52+i*32)+'" y="'+(150-h)+'" width="16" height="'+h+
+           '" rx="2" fill="'+c+'" fill-opacity="'+(0.34+i*0.09).toFixed(2)+'"/>';
+  }).join('');
+  g.curve =
+    '<path d="M40 140 C 80 138, 96 60, 128 58 S 168 126, 196 118 S 248 44, 280 52" '+stroke+'/>' +
+    '<path d="M40 150 C 80 149, 96 108, 128 106 S 168 144, 196 140 S 248 98, 280 102" stroke="'+c+
+    '" stroke-opacity=".32" fill="none" stroke-width="2.5" stroke-linecap="round"/>';
+  g.scatter = [[70,120],[98,88],[126,132],[132,66],[160,104],[186,142],[190,78],[214,110],[240,60],[248,128],[268,96]]
+    .map(function(p,i){
+      return '<circle cx="'+p[0]+'" cy="'+p[1]+'" r="'+(5+(i%3)*2.5)+
+             '" fill="'+c+'" fill-opacity="'+(0.32+(i%4)*0.15).toFixed(2)+'"/>';
+    }).join('') +
+    '<path d="M56 136 L 284 68" stroke="'+c+'" stroke-opacity=".45" stroke-width="2" stroke-dasharray="6 6"/>';
+  g.area =
+    '<path d="M40 150 L 40 116 C 78 112, 92 74, 124 80 S 164 118, 196 96 S 244 52, 280 64 L 280 150 Z" fill="'+
+    c+'" fill-opacity=".2"/>' +
+    '<path d="M40 116 C 78 112, 92 74, 124 80 S 164 118, 196 96 S 244 52, 280 64" '+stroke+'/>';
+  g.spokes = '<circle cx="160" cy="100" r="9" fill="'+c+'"/>' +
+    [0,45,90,135,180,225,270,315].map(function(a,i){
+      var r = (i%2 ? 42 : 64);
+      var x = 160 + r*Math.cos(a*Math.PI/180), y = 100 + r*Math.sin(a*Math.PI/180);
+      return '<line x1="160" y1="100" x2="'+x.toFixed(1)+'" y2="'+y.toFixed(1)+'" stroke="'+c+
+             '" stroke-opacity=".45" stroke-width="2.5"/><circle cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+
+             '" r="'+(i%2?4:6)+'" fill="'+c+'" fill-opacity="'+(i%2?'.45':'.8')+'"/>';
+    }).join('');
+  g.stack = [0,1,2,3,4].map(function(i){
+    var segs = [[28,'.8'],[34,'.5'],[22,'.28']], y = 150, out = '';
+    segs.forEach(function(sg){
+      var h = sg[0]*(1-i*0.08); y -= h;
+      out += '<rect x="'+(56+i*46)+'" y="'+y.toFixed(1)+'" width="26" height="'+h.toFixed(1)+
+             '" fill="'+c+'" fill-opacity="'+sg[1]+'"/>';
+    });
+    return out;
+  }).join('');
+  return '<svg class="art" viewBox="0 0 320 200" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">' +
+         (g[kind]||g.bars)+'</svg>';
+}
+
+/* ================= dashboards + filters ================= */
+document.getElementById('grid').innerHTML = PROJECTS.map(function(p,i){
+  var hasVideo = p.video || typeof p.youtube === 'string';
+  var badges = '<span>'+ico('image')+p.shots.length+'</span>' +
+               (hasVideo ? '<span>'+ico('play')+'1</span>' : '');
+  return '<div class="tile-wrap'+(p.big?' big':'')+(i<4?' reveal':'')+'" data-tool="'+p.tool+
+      '" data-chart="'+p.chart+'"'+(i<4?' style="animation-delay:'+(0.08+i*0.06).toFixed(2)+'s"':'')+'>' +
+    '<button class="tile" data-id="'+p.id+'" style="--tc:'+p.color+';--tint:'+p.color+'12">' +
+      '<span class="tile-viz">'+glyph(p.glyph,p.color) +
+        '<img src="'+p.thumb+'" alt="" loading="lazy" onerror="this.remove()">' +
+        (p.fave ? '<span class="fave">my fave</span>' : '') +
+        '<span class="tile-badge">'+badges+'</span></span>' +
+      '<span class="tile-meta">' +
+        '<h3>'+p.title+'</h3>' +
+        '<span class="sub">'+p.sub+'</span>' +
+        '<span class="tile-foot"><span>'+p.client+'</span>' +
+          '<span class="arrow">'+ico('arrow')+'</span></span>' +
+      '</span></button></div>';
+}).join('');
+
+(function filters(){
+  var facets = [{ key:'tool', label:'TOOL' }, { key:'chart', label:'CHART' }];
+  var state = { tool:'All', chart:'All' };
+  var host = document.getElementById('filters');
+  host.innerHTML = facets.map(function(f){
+    var vals = [];
+    PROJECTS.forEach(function(p){ if(vals.indexOf(p[f.key]) < 0){ vals.push(p[f.key]); } });
+    vals.sort();
+    var rot = ['-2.2deg','1.7deg','-1.5deg','2.3deg','-2deg','1.3deg','-2.6deg','1.9deg'];
+    return '<div class="frow"><span class="fl">'+f.label+'</span>' +
+      '<button class="sticker sm fbtn" data-facet="'+f.key+'" data-value="All" aria-pressed="true" ' +
+      'style="--sk:#FFD84D;--rot:'+rot[0]+'">All<span class="n">'+PROJECTS.length+'</span></button>' +
+      vals.map(function(v,vi){
+        var c = PROJECTS.filter(function(p){ return p[f.key] === v; }).length;
+        var hit = null;
+        PROJECTS.forEach(function(p){ if(p[f.key] === v && !hit){ hit = p.color; } });
+        return '<button class="sticker sm fbtn" data-facet="'+f.key+'" data-value="'+v+
+               '" aria-pressed="false" style="--sk:'+hit+'22;--rot:'+rot[(vi+1)%rot.length]+'">' +
+               v+'<span class="n">'+c+'</span></button>';
+      }).join('')+'</div>';
+  }).join('') + '<p class="fcount" id="fcount"></p>';
+
+  var count = document.getElementById('fcount');
+  function apply(){
+    var shown = 0;
+    Array.prototype.forEach.call(document.querySelectorAll('.tile-wrap'), function(w){
+      var ok = (state.tool==='All'  || w.getAttribute('data-tool')===state.tool) &&
+               (state.chart==='All' || w.getAttribute('data-chart')===state.chart);
+      if(ok){ w.removeAttribute('hidden'); shown++; } else { w.setAttribute('hidden',''); }
+    });
+    count.textContent = (state.tool!=='All' || state.chart!=='All')
+      ? 'Showing '+shown+' of '+PROJECTS.length+'.' : '';
+  }
+  host.addEventListener('click', function(e){
+    var b = e.target.closest('.fbtn'); if(!b) return;
+    var f = b.getAttribute('data-facet'), v = b.getAttribute('data-value');
+    state[f] = (state[f] === v) ? 'All' : v;
+    Array.prototype.forEach.call(host.querySelectorAll('.fbtn[data-facet="'+f+'"]'), function(o){
+      o.setAttribute('aria-pressed', o.getAttribute('data-value') === state[f] ? 'true' : 'false');
+    });
+    apply();
+  });
+  apply();
+})();
+
+(function tileTilt(){
+  if(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  Array.prototype.forEach.call(document.querySelectorAll('.tile'), function(t){
+    t.addEventListener('mousemove', function(e){
+      var r = t.getBoundingClientRect();
+      var dx = (e.clientX-r.left)/r.width-0.5, dy = (e.clientY-r.top)/r.height-0.5;
+      t.style.transform = 'rotateX('+(-dy*6).toFixed(2)+'deg) rotateY('+(dx*8).toFixed(2)+'deg) translateY(-5px)';
+    });
+    t.addEventListener('mouseleave', function(){ t.style.transform = ''; });
+  });
+})();
+
+/* ================= detail sheet ================= */
+var sheet = document.getElementById('sheet');
+var sheetHead = document.getElementById('sheet-head');
+var sheetPipe = document.getElementById('sheet-pipe');
+var sheetBody = document.getElementById('sheet-body');
+var sheetLabel = document.getElementById('sheet-label');
+var lastFocus = null;
+document.getElementById('sheet-close').innerHTML = ico('x')+'<span>Close</span>';
+
+function shotFigure(sh){
+  return '<figure><img src="'+sh.src+'" alt="" loading="lazy" ' +
+    'onerror="this.classList.add(\'gone\');this.nextElementSibling.style.display=\'flex\'">' +
+    '<div class="slot" style="display:none"><span>Add <code>'+sh.src+'</code></span></div>' +
+    '</figure>';
+}
+
+function render(p){
+  sheetHead.innerHTML =
+    '<div class="sh-head">' +
+      '<div class="mark">'+glyph(p.glyph,p.color)+'</div>' +
+      '<div class="kicker">'+(p.kicker||'')+'</div>' +
+      '<h2 id="sheet-title">'+p.title+'</h2>' +
+      '<p class="q">'+p.question+'</p></div>';
+
+  sheetPipe.innerHTML = '<div class="pipe">'+p.pipeline.map(function(s,i){
+    return (i ? '<span class="sep">'+ico('chev')+'</span>' : '') +
+           '<span class="stg"><i>'+s.stage+'</i><b>'+s.label+'</b></span>';
+  }).join('')+'</div>';
+
+  var acts = p.acts.map(function(a,i){
+    return '<section class="act"><span class="an">0'+(i+1)+'</span>' +
+      '<h3>'+a.head+'</h3><p>'+a.body+'</p></section>';
+  }).join('');
+
+  var facts = Object.keys(p.facts).map(function(kk){
+    return '<div><dt>'+kk+'</dt><dd>'+p.facts[kk]+'</dd></div>';
+  }).join('');
+
+  var links = [
+    p.dashboard ? '<a href="'+p.dashboard+'" target="_blank" rel="noopener">'+ico('chart')+
+                  '<span>View live dashboard</span></a>' : '',
+    p.repo ? '<a href="'+p.repo+'" target="_blank" rel="noopener">'+ico('github')+
+             '<span>GitHub repo</span></a>' : ''
+  ].filter(Boolean).join('');
+
+  /* a local file wins if `video` is set; otherwise fall back to a YouTube ID */
+  var video = '';
+  if(p.video){
+    video = '<div class="video"><div class="frame">' +
+      '<video controls playsinline preload="metadata"' +
+      (p.poster ? ' poster="'+p.poster+'"' : '') + '>' +
+      '<source src="'+p.video+'"'+
+        (/\.mov$/i.test(p.video) ? ' type="video/quicktime"' :
+         /\.webm$/i.test(p.video) ? ' type="video/webm"' : ' type="video/mp4"')+'>' +
+      'Your browser cannot play this video. ' +
+      '<a href="'+p.video+'">Download it instead.</a>' +
+      '</video></div></div>';
+  } else if(typeof p.youtube === 'string'){
+    video = '<div class="video"><div class="frame">'+(p.youtube
+      ? '<iframe src="https://www.youtube-nocookie.com/embed/'+p.youtube+'" title="'+p.title+
+        ' walkthrough" allow="accelerometer;autoplay;clipboard-write;encrypted-media;picture-in-picture" ' +
+        'allowfullscreen loading="lazy"></iframe>'
+      : '<div class="slot"><b>Walkthrough video</b><span>Set <code>video</code> to a file path, ' +
+        'or <code>youtube</code> to a video ID.</span></div>')+'</div></div>';
+  }
+
+  sheetBody.innerHTML = acts + (facts ? '<dl class="facts">'+facts+'</dl>' : '') +
+    (links ? '<div class="dlinks">'+links+'</div>' : '') +
+    '<div class="shots">'+p.shots.map(shotFigure).join('')+'</div>' + video;
+
+  sheetLabel.textContent = p.defect;
+  sheet.style.setProperty('--dc', p.color);
+  sheet.style.setProperty('--dcg', 'linear-gradient(120deg, '+p.color+'16, '+p.color+'06)');
+}
+
+function openProject(id, push){
+  var p = findProject(id); if(!p) return;
+  lastFocus = document.activeElement;
+  render(p);
+  sheet.classList.add('open');
+  document.body.classList.add('locked');
+  sheet.scrollTop = 0;
+  document.getElementById('sheet-close').focus();
+  if(push && location.hash !== '#'+id){ history.pushState(null, '', '#'+id); }
+}
+function closeSheet(push){
+  sheet.classList.remove('open');
+  document.body.classList.remove('locked');
+  if(push && location.hash){ history.pushState(null, '', location.pathname+location.search); }
+  if(lastFocus && lastFocus.focus){ lastFocus.focus(); }
+}
+
+document.getElementById('grid').addEventListener('click', function(e){
+  var t = e.target.closest('.tile'); if(t){ openProject(t.getAttribute('data-id'), true); }
+});
+document.getElementById('sheet-close').addEventListener('click', function(){ closeSheet(true); });
+sheet.addEventListener('click', function(e){ if(e.target === sheet){ closeSheet(true); } });
+document.addEventListener('keydown', function(e){
+  if(e.key === 'Escape' && sheet.classList.contains('open')){ closeSheet(true); }
+});
+window.addEventListener('popstate', function(){
+  var id = location.hash.replace('#','');
+  if(findProject(id)){ openProject(id, false); } else { closeSheet(false); }
+});
+(function(){
+  var id = location.hash.replace('#','');
+  if(findProject(id)){ openProject(id, false); }
+})();
+</script>
+</body>
+</html>
